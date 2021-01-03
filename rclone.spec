@@ -12,9 +12,9 @@ Source0:	https://github.com/rclone/rclone/releases/download/v%{version}/%{name}-
 # cd ..
 # tar cJf rclonevendor-%{version}.tar.xz rclone-%{version}/vendor
 Source1:	%{name}-vendor-%{version}.tar.xz
-# Source1-md5:	eb0153a39af5cd5e7bf40a69b6ae2542
+# Source1-md5:	26f7c92a66ca4f2b82e2cf20ece485cb
 URL:		https://rclone.org/
-BuildRequires:	golang >= 1.12
+BuildRequires:	golang >= 1.14
 ExclusiveArch:	%{ix86} %{x8664} %{arm} aarch64 mips64 mips64le ppc64 ppc64le s390x
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
