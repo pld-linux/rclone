@@ -15,10 +15,13 @@ Source1:	%{name}-vendor-%{version}.tar.xz
 # Source1-md5:	9de5b2c00f12d4f082c0c24f7e3e01d4
 URL:		https://rclone.org/
 BuildRequires:	golang >= 1.14
+BuildRequires:	rpmbuild(macros) >= 2.005
 BuildRequires:	tar >= 1:1.22
 BuildRequires:	xz
 ExclusiveArch:	%{ix86} %{x8664} %{arm} aarch64 mips64 mips64le ppc64 ppc64le s390x
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
+
+%define		_debugsource_packages	0
 
 %description
 Rclone is a command line program to sync files and directories to and
@@ -30,7 +33,7 @@ from different cloud storage providers.
 %{__mkdir_p} .go-cache
 
 %build
-GOCACHE="$(pwd)/.go-cache" go build -v -mod=vendor --ldflags "-s -X github.com/rclone/rclone/fs.Version=%{version}" -o bin/rclone
+GOCACHE="$(pwd)/.go-cache" go build -v -mod=vendor --ldflags "-X github.com/rclone/rclone/fs.Version=%{version}" -o bin/rclone
 
 %install
 rm -rf $RPM_BUILD_ROOT
