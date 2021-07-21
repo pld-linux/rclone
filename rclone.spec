@@ -1,18 +1,18 @@
 Summary:	rsync for cloud storage
 Name:		rclone
-Version:	1.55.0
+Version:	1.56.0
 Release:	1
 License:	MIT
 Group:		Networking/Utilities
 #Source0Download: https://github.com/rclone/rclone/releases
 Source0:	https://github.com/rclone/rclone/releases/download/v%{version}/%{name}-v%{version}.tar.gz
-# Source0-md5:	16389b8398ecf5c0b9942dbfc956ff88
+# Source0-md5:	fe5595f45c707860079b9f28b56ec7bd
 # cd rclone-%{version}
 # go mod vendor
 # cd ..
 # tar cJf rclone-vendor-%{version}.tar.xz rclone-v%{version}/vendor
 Source1:	%{name}-vendor-%{version}.tar.xz
-# Source1-md5:	9de5b2c00f12d4f082c0c24f7e3e01d4
+# Source1-md5:	54112d1593db387113d5db8943710240
 URL:		https://rclone.org/
 BuildRequires:	golang >= 1.14
 BuildRequires:	rpm-build >= 4.6
