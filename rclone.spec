@@ -16,10 +16,10 @@ Source1:	%{name}-vendor-%{version}.tar.xz
 URL:		https://rclone.org/
 BuildRequires:	golang >= 1.14
 BuildRequires:	rpm-build >= 4.6
-BuildRequires:	rpmbuild(macros) >= 2.005
+BuildRequires:	rpmbuild(macros) >= 2.009
 BuildRequires:	tar >= 1:1.22
 BuildRequires:	xz
-ExclusiveArch:	%{ix86} %{x8664} %{arm} aarch64 mips64 mips64le ppc64 ppc64le s390x
+ExclusiveArch:	%go_arches
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %define		_debugsource_packages	0
@@ -64,7 +64,7 @@ Zsh completion for rclone command.
 %{__mkdir_p} .go-cache
 
 %build
-GOCACHE="$(pwd)/.go-cache" go build -v -mod=vendor --ldflags "-X github.com/rclone/rclone/fs.Version=%{version}" -o bin/rclone
+%__go build -v -mod=vendor --ldflags "-X github.com/rclone/rclone/fs.Version=%{version}" -o bin/rclone
 
 %install
 rm -rf $RPM_BUILD_ROOT
