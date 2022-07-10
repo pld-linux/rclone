@@ -14,6 +14,7 @@ Source0:	https://github.com/rclone/rclone/releases/download/v%{version}/%{name}-
 # tar cJf rclone-vendor-%{version}.tar.xz rclone-v%{version}/vendor
 Source1:	%{name}-vendor-%{vendor_ver}.tar.xz
 # Source1-md5:	227a650556268f4faba8344fed22ee90
+Patch0:		webdav-modtime.patch
 URL:		https://rclone.org/
 BuildRequires:	golang >= 1.14
 BuildRequires:	rpm-build >= 4.6
@@ -61,6 +62,7 @@ Zsh completion for rclone command.
 
 %prep
 %setup -q -a1 -n %{name}-v%{version}
+%patch0 -p1
 
 %{__mv} %{name}-v%{vendor_ver}/vendor .
 

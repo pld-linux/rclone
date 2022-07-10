@@ -1,0 +1,243 @@
+From b9c0e1efdb88ac08ae6053eaeb2f3034a3416e51 Mon Sep 17 00:00:00 2001
+From: Jan Palus <jpalus@fastmail.com>
+Date: Sat, 16 Apr 2022 23:06:53 +0200
+Subject: [PATCH 1/3] webdav: add support for spec compliant modification time
+ update
+
+rfc4918 section 15.7 states that getlastmodified SHOULD be protected
+(read-only) but does not mandate it. implementations are free to choose
+whether it is possible to update modification time. one such
+implementation operating in the wild that allows it is FastMail WebDav
+access. since specification recommends property to be protected make it
+disabled by default.
+---
+ backend/webdav/webdav.go | 63 ++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 61 insertions(+), 2 deletions(-)
+
+diff --git a/backend/webdav/webdav.go b/backend/webdav/webdav.go
+index 9564ae601..20f2b45ea 100644
+--- a/backend/webdav/webdav.go
++++ b/backend/webdav/webdav.go
+@@ -124,6 +124,11 @@ You can set multiple headers, e.g. '"Cookie","name=value","Authorization","xxx"'
+ `,
+ 			Default:  fs.CommaSepList{},
+ 			Advanced: true,
++		}, {
++			Name:     "update_modtime",
++			Help:     "Adjust modification time on servers which allow DAV:getlastmodified property update",
++			Default:  false,
++			Advanced: true,
+ 		}},
+ 	})
+ }
+@@ -138,6 +143,7 @@ type Options struct {
+ 	BearerTokenCommand string               `config:"bearer_token_command"`
+ 	Enc                encoder.MultiEncoder `config:"encoding"`
+ 	Headers            fs.CommaSepList      `config:"headers"`
++	UpdateModTime      bool                 `config:"update_modtime"`
+ }
+ 
+ // Fs represents a remote webdav
+@@ -405,6 +411,13 @@ func NewFs(ctx context.Context, name, root string, m configmap.Mapper) (fs.Fs, e
+ 		return nil, err
+ 	}
+ 
++	var precision time.Duration
++	if opt.UpdateModTime {
++		precision = time.Second
++	} else {
++		precision = fs.ModTimeNotSupported
++	}
++
+ 	f := &Fs{
+ 		name:        name,
+ 		root:        root,
+@@ -412,7 +425,7 @@ func NewFs(ctx context.Context, name, root string, m configmap.Mapper) (fs.Fs, e
+ 		endpoint:    u,
+ 		endpointURL: u.String(),
+ 		pacer:       fs.NewPacer(ctx, pacer.NewDefault(pacer.MinSleep(minSleep), pacer.MaxSleep(maxSleep), pacer.DecayConstant(decayConstant))),
+-		precision:   fs.ModTimeNotSupported,
++		precision:   precision,
+ 	}
+ 
+ 	client := fshttp.NewClient(ctx)
+@@ -634,6 +647,16 @@ var owncloudProps = []byte(`<?xml version="1.0"?>
+  </d:prop>
+ </d:propfind>
+ `)
++var modtimeUpdatePropStart = `<?xml version="1.0"?>
++<d:propertyupdate xmlns:d="DAV:">
++ <d:set>
++ <d:prop>
++ <d:getlastmodified>`
++var modtimeUpdatePropEnd = `</d:getlastmodified>
++ </d:prop>
++ </d:set>
++</d:propertyupdate>
++`
+ 
+ // list the objects into the function supplied
+ //
+@@ -1251,7 +1274,37 @@ func (o *Object) ModTime(ctx context.Context) time.Time {
+ 
+ // SetModTime sets the modification time of the local fs object
+ func (o *Object) SetModTime(ctx context.Context, modTime time.Time) error {
+-	return fs.ErrorCantSetModTime
++	if !o.fs.opt.UpdateModTime {
++		return fs.ErrorCantSetModTime
++	}
++	opts := rest.Opts{
++		Method: "PROPPATCH",
++		Path:   o.filePath(),
++	}
++	var body bytes.Buffer
++	body.WriteString(modtimeUpdatePropStart)
++	body.WriteString(modTime.Format(time.RFC1123))
++	body.WriteString(modtimeUpdatePropEnd)
++	opts.Body = &body
++
++	var result api.Multistatus
++	var resp *http.Response
++	var err error
++	err = o.fs.pacer.Call(func() (bool, error) {
++		resp, err = o.fs.srv.CallXML(ctx, &opts, nil, &result)
++		return o.fs.shouldRetry(ctx, resp, err)
++	})
++	if err != nil {
++		return err
++	}
++	if len(result.Responses) < 1 {
++		return fs.ErrorObjectNotFound
++	}
++	item := result.Responses[0]
++	if !item.Props.StatusOK() {
++		return fs.ErrorObjectNotFound
++	}
++	return nil
+ }
+ 
+ // Storable returns a boolean showing whether this object storable
+@@ -1337,6 +1390,12 @@ func (o *Object) Update(ctx context.Context, in io.Reader, src fs.ObjectInfo, op
+ 		_ = o.Remove(ctx)
+ 		return err
+ 	}
++	if !o.fs.useOCMtime && o.fs.opt.UpdateModTime {
++		err = o.SetModTime(ctx, src.ModTime(ctx))
++		if err != nil {
++			return fmt.Errorf("Update ModTime failed: %w", err)
++		}
++	}
+ 	// read metadata from remote
+ 	o.hasMetaData = false
+ 	return o.readMetaData(ctx)
+-- 
+2.37.0
+
+From 9394b57866019df139fc0ce96a7a3572fad57666 Mon Sep 17 00:00:00 2001
+From: Jan Palus <jpalus@fastmail.com>
+Date: Wed, 27 Apr 2022 10:17:51 +0200
+Subject: [PATCH 2/3] webdav: switch to tristate for update_modtime
+
+---
+ backend/webdav/webdav.go | 17 ++++++++++-------
+ 1 file changed, 10 insertions(+), 7 deletions(-)
+
+diff --git a/backend/webdav/webdav.go b/backend/webdav/webdav.go
+index 20f2b45ea..d4c331de8 100644
+--- a/backend/webdav/webdav.go
++++ b/backend/webdav/webdav.go
+@@ -125,9 +125,12 @@ You can set multiple headers, e.g. '"Cookie","name=value","Authorization","xxx"'
+ 			Default:  fs.CommaSepList{},
+ 			Advanced: true,
+ 		}, {
+-			Name:     "update_modtime",
+-			Help:     "Adjust modification time on servers which allow DAV:getlastmodified property update",
+-			Default:  false,
++			Name: "update_modtime",
++			Help: `Adjust modification time on servers which allow DAV:getlastmodified property update.
++
++Use provider's default if unset.
++`,
++			Default:  fs.Tristate{},
+ 			Advanced: true,
+ 		}},
+ 	})
+@@ -143,7 +146,7 @@ type Options struct {
+ 	BearerTokenCommand string               `config:"bearer_token_command"`
+ 	Enc                encoder.MultiEncoder `config:"encoding"`
+ 	Headers            fs.CommaSepList      `config:"headers"`
+-	UpdateModTime      bool                 `config:"update_modtime"`
++	UpdateModTime      fs.Tristate          `config:"update_modtime"`
+ }
+ 
+ // Fs represents a remote webdav
+@@ -412,7 +415,7 @@ func NewFs(ctx context.Context, name, root string, m configmap.Mapper) (fs.Fs, e
+ 	}
+ 
+ 	var precision time.Duration
+-	if opt.UpdateModTime {
++	if opt.UpdateModTime.Valid && opt.UpdateModTime.Value {
+ 		precision = time.Second
+ 	} else {
+ 		precision = fs.ModTimeNotSupported
+@@ -1274,7 +1277,7 @@ func (o *Object) ModTime(ctx context.Context) time.Time {
+ 
+ // SetModTime sets the modification time of the local fs object
+ func (o *Object) SetModTime(ctx context.Context, modTime time.Time) error {
+-	if !o.fs.opt.UpdateModTime {
++	if !o.fs.opt.UpdateModTime.Valid || !o.fs.opt.UpdateModTime.Value {
+ 		return fs.ErrorCantSetModTime
+ 	}
+ 	opts := rest.Opts{
+@@ -1390,7 +1393,7 @@ func (o *Object) Update(ctx context.Context, in io.Reader, src fs.ObjectInfo, op
+ 		_ = o.Remove(ctx)
+ 		return err
+ 	}
+-	if !o.fs.useOCMtime && o.fs.opt.UpdateModTime {
++	if !o.fs.useOCMtime && o.fs.opt.UpdateModTime.Valid && o.fs.opt.UpdateModTime.Value {
+ 		err = o.SetModTime(ctx, src.ModTime(ctx))
+ 		if err != nil {
+ 			return fmt.Errorf("Update ModTime failed: %w", err)
+-- 
+2.37.0
+
+From 6775d10cc030e2e4b78ca774087bbb494cb0f79b Mon Sep 17 00:00:00 2001
+From: Jan Palus <jpalus@fastmail.com>
+Date: Thu, 28 Apr 2022 22:20:40 +0200
+Subject: [PATCH 3/3] webdav: add fastmail provider
+
+enables by default modtime update with PROPPATCH
+---
+ backend/webdav/webdav.go | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/backend/webdav/webdav.go b/backend/webdav/webdav.go
+index d4c331de8..50152503e 100644
+--- a/backend/webdav/webdav.go
++++ b/backend/webdav/webdav.go
+@@ -87,6 +87,9 @@ func init() {
+ 			}, {
+ 				Value: "sharepoint-ntlm",
+ 				Help:  "Sharepoint with NTLM authentication, usually self-hosted or on-premises",
++			}, {
++				Value: "fastmail",
++				Help:  "Fastmail",
+ 			}, {
+ 				Value: "other",
+ 				Help:  "Other site/service or software",
+@@ -596,6 +599,12 @@ func (f *Fs) setQuirks(ctx context.Context, vendor string) error {
+ 		// so we must perform an extra check to detect this
+ 		// condition and return a proper error code.
+ 		f.checkBeforePurge = true
++	case "fastmail":
++		if !f.opt.UpdateModTime.Valid {
++			f.precision = time.Second
++			f.opt.UpdateModTime.Valid = true
++			f.opt.UpdateModTime.Value = true
++		}
+ 	case "other":
+ 	default:
+ 		fs.Debugf(f, "Unknown vendor %q", vendor)
+-- 
+2.37.0
+
