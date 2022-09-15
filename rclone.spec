@@ -1,13 +1,13 @@
 %define		vendor_ver	1.59.1
 Summary:	rsync for cloud storage
 Name:		rclone
-Version:	1.59.1
+Version:	1.59.2
 Release:	1
 License:	MIT
 Group:		Networking/Utilities
 #Source0Download: https://github.com/rclone/rclone/releases
 Source0:	https://github.com/rclone/rclone/releases/download/v%{version}/%{name}-v%{version}.tar.gz
-# Source0-md5:	2e8600f858109477e6ce7cf02d4919be
+# Source0-md5:	16d9c13f85e491239066d1bc2e15782c
 # cd rclone-%{version}
 # go mod vendor
 # cd ..
