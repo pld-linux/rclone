@@ -1,4 +1,4 @@
-From ab4cc10f49ddd4532b37f18b665716ee81c5f6bf Mon Sep 17 00:00:00 2001
+From fb38f0278d42b1de2a2f76c59aa294276aef64a1 Mon Sep 17 00:00:00 2001
 From: Jan Palus <jpalus@fastmail.com>
 Date: Mon, 15 May 2023 19:16:22 +0200
 Subject: [PATCH 1/2] webdav: fastmail: adapt modtime update
@@ -10,10 +10,10 @@ https://github.com/rclone/rclone/pull/6108
  1 file changed, 14 insertions(+), 3 deletions(-)
 
 diff --git a/backend/webdav/webdav.go b/backend/webdav/webdav.go
-index 206b11bd1..f489a2068 100644
+index 801e8d970..c91e4950c 100644
 --- a/backend/webdav/webdav.go
 +++ b/backend/webdav/webdav.go
-@@ -176,6 +176,7 @@ type Fs struct {
+@@ -178,6 +178,7 @@ type Fs struct {
  	canStream          bool          // set if can stream
  	useOCMtime         bool          // set if can use X-OC-Mtime
  	propsetMtime       bool          // set if can use propset
@@ -21,7 +21,7 @@ index 206b11bd1..f489a2068 100644
  	retryWithZeroDepth bool          // some vendors (sharepoint) won't list files when Depth is 1 (our default)
  	checkBeforePurge   bool          // enables extra check that directory to purge really exists
  	hasOCMD5           bool          // set if can use owncloud style checksums for MD5
-@@ -578,18 +579,22 @@ func (f *Fs) setQuirks(ctx context.Context, vendor string) error {
+@@ -581,18 +582,22 @@ func (f *Fs) setQuirks(ctx context.Context, vendor string) error {
  		f.canStream = true
  		f.precision = time.Second
  		f.useOCMtime = true
@@ -43,8 +43,8 @@ index 206b11bd1..f489a2068 100644
 +		f.propNameMtime = "lastmodified"
  		f.hasOCSHA1 = true
  		f.canChunk = true
- 		if err := f.verifyChunkConfig(); err != nil {
-@@ -1305,11 +1310,11 @@ func (o *Object) ModTime(ctx context.Context) time.Time {
+ 
+@@ -1322,11 +1327,11 @@ func (o *Object) ModTime(ctx context.Context) time.Time {
  // Set modified time using propset
  //
  // <d:multistatus xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns"><d:response><d:href>/ocm/remote.php/webdav/office/wir.jpg</d:href><d:propstat><d:prop><d:lastmodified/></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>
@@ -58,7 +58,7 @@ index 206b11bd1..f489a2068 100644
    </D:prop>
   </D:set>
  </D:propertyupdate>
-@@ -1318,11 +1323,17 @@ var owncloudPropset = `<?xml version="1.0" encoding="utf-8" ?>
+@@ -1335,11 +1340,17 @@ var owncloudPropset = `<?xml version="1.0" encoding="utf-8" ?>
  // SetModTime sets the modification time of the local fs object
  func (o *Object) SetModTime(ctx context.Context, modTime time.Time) error {
  	if o.fs.propsetMtime {
@@ -80,7 +80,7 @@ index 206b11bd1..f489a2068 100644
 -- 
 2.41.0
 
-From 105f65b7f3892c69d72956331b63b661b2ff2a3b Mon Sep 17 00:00:00 2001
+From 84d2bbc2e2eb15f4ef3558aec46adf33d3b443c3 Mon Sep 17 00:00:00 2001
 From: Jan Palus <jpalus@fastmail.com>
 Date: Mon, 15 May 2023 19:20:32 +0200
 Subject: [PATCH 2/2] webdav: fastmail: support for update_modtime config opt
@@ -92,10 +92,10 @@ https://github.com/rclone/rclone/pull/6108
  1 file changed, 13 insertions(+), 2 deletions(-)
 
 diff --git a/backend/webdav/webdav.go b/backend/webdav/webdav.go
-index f489a2068..5c26588cf 100644
+index c91e4950c..a8c7ffce8 100644
 --- a/backend/webdav/webdav.go
 +++ b/backend/webdav/webdav.go
-@@ -144,6 +144,14 @@ Set to 0 to disable chunked uploading.
+@@ -146,6 +146,14 @@ Set to 0 to disable chunked uploading.
  `,
  			Advanced: true,
  			Default:  10 * fs.Mebi, // Default NextCloud `max_chunk_size` is `10 MiB`. See https://github.com/nextcloud/server/blob/0447b53bda9fe95ea0cbed765aa332584605d652/apps/files/lib/App.php#L57
@@ -110,7 +110,7 @@ index f489a2068..5c26588cf 100644
  		}},
  	})
  }
-@@ -160,6 +168,7 @@ type Options struct {
+@@ -162,6 +170,7 @@ type Options struct {
  	Headers            fs.CommaSepList      `config:"headers"`
  	PacerMinSleep      fs.Duration          `config:"pacer_min_sleep"`
  	ChunkSize          fs.SizeSuffix        `config:"nextcloud_chunk_size"`
@@ -118,7 +118,7 @@ index f489a2068..5c26588cf 100644
  }
  
  // Fs represents a remote webdav
-@@ -579,8 +588,10 @@ func (f *Fs) setQuirks(ctx context.Context, vendor string) error {
+@@ -582,8 +591,10 @@ func (f *Fs) setQuirks(ctx context.Context, vendor string) error {
  		f.canStream = true
  		f.precision = time.Second
  		f.useOCMtime = true
