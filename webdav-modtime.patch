@@ -96,9 +96,9 @@ index c91e4950c..a8c7ffce8 100644
 --- a/backend/webdav/webdav.go
 +++ b/backend/webdav/webdav.go
 @@ -146,6 +146,14 @@ Set to 0 to disable chunked uploading.
- `,
+ 			Help:     "Exclude ownCloud shares",
  			Advanced: true,
- 			Default:  10 * fs.Mebi, // Default NextCloud `max_chunk_size` is `10 MiB`. See https://github.com/nextcloud/server/blob/0447b53bda9fe95ea0cbed765aa332584605d652/apps/files/lib/App.php#L57
+ 			Default:  false,
 +		}, {
 +			Name: "update_modtime",
 +			Help: `Adjust modification time on servers which allow DAV:getlastmodified property update.
@@ -111,9 +111,9 @@ index c91e4950c..a8c7ffce8 100644
  	})
  }
 @@ -162,6 +170,7 @@ type Options struct {
- 	Headers            fs.CommaSepList      `config:"headers"`
  	PacerMinSleep      fs.Duration          `config:"pacer_min_sleep"`
  	ChunkSize          fs.SizeSuffix        `config:"nextcloud_chunk_size"`
+ 	ExcludeShares      bool                 `config:"owncloud_exclude_shares"`
 +	UpdateModTime      fs.Tristate          `config:"update_modtime"`
  }
  
