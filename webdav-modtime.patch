@@ -59,9 +59,9 @@ index 801e8d970..c91e4950c 100644
   </D:set>
  </D:propertyupdate>
 @@ -1335,11 +1340,17 @@ var owncloudPropset = `<?xml version="1.0" encoding="utf-8" ?>
- // SetModTime sets the modification time of the local fs object
- func (o *Object) SetModTime(ctx context.Context, modTime time.Time) error {
- 	if o.fs.propsetMtime {
+ 			checksums = "MD5:" + o.md5
+ 		}
+ 
 +		var modTimeStr string
 +		if o.fs.propNameMtime == "getlastmodified" {
 +			modTimeStr = modTime.Format(time.RFC1123)
@@ -75,8 +75,8 @@ index 801e8d970..c91e4950c 100644
 -			Body:       strings.NewReader(fmt.Sprintf(owncloudPropset, modTime.Unix())),
 +			Body:       strings.NewReader(fmt.Sprintf(mtimePropset, o.fs.propNameMtime, modTimeStr, o.fs.propNameMtime)),
  		}
- 		var result api.Multistatus
- 		var resp *http.Response
+ 		if checksums != "" {
+ 			opts.Body = strings.NewReader(fmt.Sprintf(owncloudPropsetWithChecksum, modTime.Unix(), checksums))
 -- 
 2.41.0
 
@@ -96,7 +96,7 @@ index c91e4950c..a8c7ffce8 100644
 --- a/backend/webdav/webdav.go
 +++ b/backend/webdav/webdav.go
 @@ -146,6 +146,14 @@ Set to 0 to disable chunked uploading.
- 			Help:     "Exclude ownCloud shares",
+ 			Help:     "Exclude ownCloud mounted storages",
  			Advanced: true,
  			Default:  false,
 +		}, {
@@ -111,9 +111,9 @@ index c91e4950c..a8c7ffce8 100644
  	})
  }
 @@ -162,6 +170,7 @@ type Options struct {
- 	PacerMinSleep      fs.Duration          `config:"pacer_min_sleep"`
  	ChunkSize          fs.SizeSuffix        `config:"nextcloud_chunk_size"`
  	ExcludeShares      bool                 `config:"owncloud_exclude_shares"`
+ 	ExcludeMounts      bool                 `config:"owncloud_exclude_mounts"`
 +	UpdateModTime      fs.Tristate          `config:"update_modtime"`
  }
  
