@@ -2,13 +2,13 @@
 
 Summary:	rsync for cloud storage
 Name:		rclone
-Version:	1.68.0
+Version:	1.68.1
 Release:	1
 License:	MIT
 Group:		Networking/Utilities
 #Source0Download: https://github.com/rclone/rclone/releases
 Source0:	https://github.com/rclone/rclone/releases/download/v%{version}/%{name}-v%{version}.tar.gz
-# Source0-md5:	9315075f1f9fc0fd6b916863cf77ed8c
+# Source0-md5:	5cf4f2d8f8f59fe9743089c7192ef7a4
 # cd rclone-%{version}
 # go mod vendor
 # cd ..
