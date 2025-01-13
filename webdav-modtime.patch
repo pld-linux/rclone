@@ -108,12 +108,12 @@ index c91e4950c..a8c7ffce8 100644
 +			Default:  fs.Tristate{},
 +			Advanced: true,
  		},
- 			fshttp.UnixSocketConfig,
- 		},
+			fshttp.UnixSocketConfig,
+			{
 @@ -162,6 +170,7 @@ type Options struct {
- 	ExcludeShares      bool                 `config:"owncloud_exclude_shares"`
  	ExcludeMounts      bool                 `config:"owncloud_exclude_mounts"`
  	UnixSocket         string               `config:"unix_socket"`
+ 	AuthRedirect       bool                 `config:"auth_redirect"`
 +	UpdateModTime      fs.Tristate          `config:"update_modtime"`
  }
  
