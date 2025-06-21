@@ -25,7 +25,7 @@ BuildRequires:	xz
 ExclusiveArch:	%go_arches
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
-%define		_debugsource_packages	0
+%undefine	_debugsource_packages
 
 %description
 Rclone is a command line program to sync files and directories to and
