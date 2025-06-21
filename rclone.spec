@@ -63,7 +63,7 @@ Zsh completion for rclone command.
 
 %prep
 %setup -q -a1 -n %{name}-v%{version}
-%patch0 -p1
+%patch -P0 -p1
 
 %{__mv} %{name}-v%{vendor_ver}/vendor .
 
