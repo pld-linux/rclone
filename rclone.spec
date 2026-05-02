@@ -1,20 +1,20 @@
-%define		vendor_ver	1.73.5
+%define		vendor_ver	1.74.0
 
 Summary:	rsync for cloud storage
 Name:		rclone
-Version:	1.73.5
+Version:	1.74.0
 Release:	1
 License:	MIT
 Group:		Networking/Utilities
 #Source0Download: https://github.com/rclone/rclone/releases
 Source0:	https://github.com/rclone/rclone/releases/download/v%{version}/%{name}-v%{version}.tar.gz
-# Source0-md5:	90d4b7c091c95de8b8dc1869278b9167
+# Source0-md5:	d3c3eb1f644d4554089bc7bc2cc82876
 # cd rclone-%{version}
 # go mod vendor
 # cd ..
 # tar cJf rclone-vendor-%{version}.tar.xz rclone-v%{version}/vendor
 Source1:	%{name}-vendor-%{vendor_ver}.tar.xz
-# Source1-md5:	9f0c2b72c5dd6b0b0e267f9122483c29
+# Source1-md5:	902a665c83e9d85cebaccb96cb93648c
 Patch0:		webdav-modtime.patch
 URL:		https://rclone.org/
 BuildRequires:	golang >= 1.25.0
